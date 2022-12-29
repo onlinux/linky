@@ -1,10 +1,12 @@
 [MQTT]
 MQTT_USERNAME = <username if exists>
-MQTT_PASSWORD = <passwoed if exists>
+MQTT_PASSWORD = <password if exists>
 MQTT_IP = <IP of mqtt broker>
 MQTT_PORT = <mqtt broker PORT>
 
 [DOMOTICZ]
+DOMOTICZ_IP = <Domoticz server IP>
+DOMOTICZ_PORT = <Domoticz server PORT>
 # Domoticz index of linky P1_METER
 LINKY_IDX = 466
 # Domoticz index to be displayed within Marquee, here SONOFF POW

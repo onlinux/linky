@@ -122,6 +122,10 @@ mqttUserName = ""
 mqttPassword = ""
 mqttIp = ""
 mqttPort = ""
+ip = "192.168.0.160"
+port = "8080"
+
+
 
 kWh = 0.0
 energy = "0"
@@ -152,12 +156,17 @@ def get_config(file):
             global mqttPassword
             global mqttIp
             global mqttPort
+            global ip
+            global port
             global index
             logging.debug("Get variable MQTT")
             mqttUserName = config.get('MQTT', 'MQTT_USERNAME')
             mqttPassword = config.get('MQTT', 'MQTT_PASSWORD')
             mqttIp = config.get('MQTT', 'MQTT_IP')
             mqttPort = config.get('MQTT', 'MQTT_PORT')
+            ip = config.get('DOMOTICZ','DOMOTICZ_IP')
+            port = config.get('DOMOTICZ','DOMOTICZ_PORT')
+            
             id = config.get('DOMOTICZ', 'LINKY_IDX')
             if id:
                 idx = id
@@ -238,22 +247,19 @@ def parseArg():
 def DomoticzAPI(APICall):
     start = time.time()
     resultJson = None
-    ip = "192.168.0.160"  # Local Domoticz server ip
-    url = "http://{}:8080/json.htm?{}".format(ip,
+    global ip    # Local Domoticz server ip
+    global port  # local domoticz port
+    url = "http://{}:{}/json.htm?{}".format(ip,port,
                                               urllib.parse.quote(APICall, '&='))
     logging.debug(url)
     req = urllib.request.Request(url)
+    print(url)
 
     try:
         response = urllib.request.urlopen(req)
-    except urllib.URLError as e:
-        if hasattr(e, 'reason'):
-            logging.error('We failed to reach a server.')
-            logging.error('Reason: ', e.reason)
-        elif hasattr(e, 'code'):
-            logging.error('The server couldn\'t fulfill the request.')
-            logging.error('Error code: ', e.code)
-
+        
+    except urllib.error.URLError as e:
+        logging.error("OS error: {0}".format(e))
         logging.error(url)
     else:
         resultJson = json.loads(response.read().decode('utf-8'))
