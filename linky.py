@@ -27,7 +27,6 @@ from datetime import datetime
 import fnmatch
 from icon import Icon, Button
 # Libraries needed to access DomoticzAPI
-import base64
 import urllib
 import configparser
 

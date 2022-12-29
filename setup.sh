@@ -10,7 +10,7 @@ VENV=venv
 if [ ! -d "$VENV" ]
 then
 
-    PYTHON=`which python2`
+    PYTHON=`which python3`
 
     if [ ! -f $PYTHON ]
     then
@@ -20,10 +20,9 @@ then
 
 fi
 
+pip3 install -r requirements.txt
+
 . $VENV/bin/activate
 
-pip install -r requirements.txt
 
-cd pywapi-0.3.8
-../$VENV/bin/python setup.py install
-cd -
+

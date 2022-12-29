@@ -1,8 +1,8 @@
-# Monitor linky
+# Monitorer sa consomation d'énergie avec linky, liXee et Domoticz
 
 <img  src="/Images/Peek 27-12-2022 21-34.gif" alt=" linky " />
 
-# Installation libraries
+# Installation des bibliothèques
 
 `git clone https://github.com/onlinux/linky.git`
 
@@ -14,7 +14,7 @@ run:
 
 # Configuration
 
-Modify config.ini
+Modifier config.ini
 
 <pre>
 [MQTT]
@@ -24,14 +24,12 @@ MQTT_IP=192.168.0.64
 MQTT_PORT=1883
 
 [DOMOTICZ]
-# Domoticz index of linky P1_METER
-LINKY_IDX = 466
-# Domoticz index to be displayed within Marquee, here SONOFF POW
-marqueeIdx = 27
+LINKY_IDX = 466 # Domoticz index of linky P1_METER
+marqueeIdx = 27 # Domoticz index to be displayed within Marquee, here SONOFF POW
 </pre>
 
 # Start Thermostat Domoticz
 
 `source venv/bin/activate`
 
-`python3 z2.py`
+`python3 linky.py`
