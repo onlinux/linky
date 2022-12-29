@@ -1,4 +1,6 @@
-# Monitorer sa consommation d'énergie avec linky, liXee et Domoticz
+# Monitorer sa consommation d'énergie 
+
+Avec linky, liXee et Domoticz
 
 <img  src="/Images/Peek 27-12-2022 21-34.gif" alt=" linky " />
 
@@ -20,15 +22,17 @@ Modifier config.ini
 [MQTT]
 MQTT_USERNAME= xxxxx # Enter username if exists
 MQTT_PASSWORD= xxxxx # Enter password to access mqtt broker
-MQTT_IP=192.168.0.64
-MQTT_PORT=1883
+MQTT_IP = <IP of mqtt broker>
+MQTT_PORT = <mqtt broker PORT>
 
 [DOMOTICZ]
+DOMOTICZ_IP = <Domoticz server IP>
+DOMOTICZ_PORT = <Domoticz server PORT>
 LINKY_IDX = 466 # Domoticz index of linky P1_METER
 marqueeIdx = 27 # Domoticz index to be displayed within Marquee, here SONOFF POW
 </pre>
 
-# Start Thermostat Domoticz
+# Start linky.py
 
 `source venv/bin/activate`
 
