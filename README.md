@@ -1,4 +1,4 @@
-# Monitorer sa consomation d'énergie avec linky, liXee et Domoticz
+# Monitorer sa consommation d'énergie avec linky, liXee et Domoticz
 
 <img  src="/Images/Peek 27-12-2022 21-34.gif" alt=" linky " />
 
