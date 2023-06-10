@@ -1,4 +1,5 @@
 .idea
+.directory
 *.py[cod]
 *.log
 *.zip
