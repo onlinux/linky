@@ -36,7 +36,8 @@ from domoticzHandler import domoticzHandler
 hostname = os.uname().nodename
 pp = pprint.PrettyPrinter(indent=4)
 # MQTT Topic to subscribe to
-TOPIC = [('zigbee2mqtt/lixee', 0), ('power/home/today', 1)]
+TOPIC = [('zigbee2mqtt/lixee', 0), ('power/home/today', 1),
+         ('tele/sonoff/SENSOR', 1)]
 
 # os.path.realpath returns the canonical path of the specified filename,
 # eliminating any symbolic links encountered in the path.
@@ -325,9 +326,10 @@ class RenderThreadMqtt(threading.Thread):
         global rssi
         global energy
         global lastUpdateTime
-
+        global marquee
         try:
             payload = json.loads(self.msg.payload)
+            logging.debug(payload)
 
             if 'MOTDETAT' in payload:
                 logging.debug(str(payload['apparent_power']) +
@@ -340,6 +342,10 @@ class RenderThreadMqtt(threading.Thread):
                 kWh = str(payload['conso'])
 
             renderEnergy()
+
+            if 'ENERGY' in payload:
+                marquee.addMsg(
+                    'SI ' + str(payload['ENERGY']['Power']) + 'W', DARKSLATEGREY, name='energy')
 
         except ValueError:
             logging.warning(' %s LINKY ERROR ' % (threading.current_thread()))
@@ -385,7 +391,7 @@ fontTemp = pygame.font.Font(zfontpath, 50)
 updateRate = 60 * 5  # kWh update interval in seconds
 running = True      # define a variable to control the main loop
 marquee = Marquee(fontTitle, DARKSLATEGREY, speed=2, ry=135 * 1.5)
-# marquee.addMsg('sonoff', DARKSLATEGREY, name='energy')
+marquee.addMsg('sonoff', DARKSLATEGREY, name='energy')
 
 # Create time event for updating kWh
 # updatekWh_event = pygame.USEREVENT + 1
@@ -454,9 +460,6 @@ try:
                 RenderTimeThread().start()
                 pygame.display.set_caption(
                     "{} FPS: {:.1f}".format(title, clock.get_fps()))
-
-            # elif event.type == updatekWh_event:
-            #    threading.Thread(target=getStatus, args=(idx,)).start()
 
             pressed_keys = pygame.key.get_pressed()
 
