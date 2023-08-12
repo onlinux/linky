@@ -8,10 +8,8 @@
 # Import required Python libraries
 #
 #
-from inspect import Traceback
+import traceback
 import os
-import socket
-import pygame
 import time
 import logging
 import logging.config
@@ -19,17 +17,16 @@ import signal
 import sys
 import getopt
 import threading
-from Marquee import *
 import pprint
-import paho.mqtt.client as mqtt  # type: ignore
-import json
-from datetime import datetime
 import fnmatch
-from icon import Icon, Button
-# Libraries needed to access DomoticzAPI
+import json
 import urllib
 import configparser
-
+import paho.mqtt.client as mqtt  # type: ignore
+import pygame
+from Marquee import *
+from icon import Icon
+# Libraries needed to access DomoticzAPI
 
 class PiTft:
     'Pi Tft screen class'
@@ -45,9 +42,9 @@ class PiTft:
             print("I'm running under X display = {0}".format(disp_no))
 
         try:
-            pygame.init()
+            # pygame.init()
             pygame.mixer.quit()
-        except pygame.error:
+        except:
             print('Driver:  failed.')
 
         pygame.display.set_caption(title)
@@ -79,13 +76,13 @@ class PiTft:
         print("del pygame instance")
 
     def clear(self, colour=None):
-        if colour == None:
+        if colour is None:
             colour = self.bgc
         self.screen.fill(colour)
         logging.debug(' Clear screen')
 
     def setBackgroundColour(self, colour=None):
-        if colour != None:
+        if colour is not None:
             self.bgc = colour
 
 
@@ -126,7 +123,6 @@ ip = "192.168.0.160"
 port = "8080"
 
 
-
 kWh = 0.0
 energy = "0"
 rssi = 0
@@ -164,9 +160,9 @@ def get_config(file):
             mqttPassword = config.get('MQTT', 'MQTT_PASSWORD')
             mqttIp = config.get('MQTT', 'MQTT_IP')
             mqttPort = config.get('MQTT', 'MQTT_PORT')
-            ip = config.get('DOMOTICZ','DOMOTICZ_IP')
-            port = config.get('DOMOTICZ','DOMOTICZ_PORT')
-            
+            ip = config.get('DOMOTICZ', 'DOMOTICZ_IP')
+            port = config.get('DOMOTICZ', 'DOMOTICZ_PORT')
+
             id = config.get('DOMOTICZ', 'LINKY_IDX')
             if id:
                 idx = id
@@ -249,15 +245,15 @@ def DomoticzAPI(APICall):
     resultJson = None
     global ip    # Local Domoticz server ip
     global port  # local domoticz port
-    url = "http://{}:{}/json.htm?{}".format(ip,port,
-                                              urllib.parse.quote(APICall, '&='))
+    url = "http://{}:{}/json.htm?{}".format(ip, port,
+                                            urllib.parse.quote(APICall, '&='))
     logging.debug(url)
     req = urllib.request.Request(url)
     print(url)
 
     try:
         response = urllib.request.urlopen(req)
-        
+
     except urllib.error.URLError as e:
         logging.error("OS error: {0}".format(e))
         logging.error(url)
@@ -539,7 +535,7 @@ fontTemp = pygame.font.Font(zfontpath, 64)
 
 updateRate = 60 * 5  # kWh update interval in seconds
 running = True      # define a variable to control the main loop
-marquee = Marquee(fontMono24, GREY, speed=1, ry=280)
+marquee = Marquee(fontMono24, GREY, speed=2, ry=280)
 marquee.addMsg('sonoff', GREY, name='energy')
 
 # Create time event for updating kWh
@@ -554,7 +550,6 @@ threading.Thread(target=getStatus, args=(idx,)).start()
 
 clock = pygame.time.Clock()
 
-import traceback
 try:
     # Setup MQTT connection and start loop
     client = mqtt.Client("LINKY {}".format(hostname))

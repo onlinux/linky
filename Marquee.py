@@ -1,8 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 import pygame
-import time
-import random
 
 # set up the colors
 BLACK = (0,   0,   0)
@@ -20,16 +19,18 @@ LIGHTBLUE = (0, 113, 188)
 
 
 class Marquee:
+    """ Marquee"""
+
     def __init__(self, font, color=GREEN, ry=0, speed=5, bg=BLUE, direction=0):
 
         self.screen = pygame.display.get_surface()
         self.font = font
-        self.tw, self.th = (0, 0)
+        self.tw, self.th = (0, 0)  # pylint: disable=C0103
         info = pygame.display.Info()  # width and height
-        self.w, self.h = info.current_w, info.current_h
+        self.w, self.h = info.current_w, info.current_h  # pylint: disable=C0103
 
         if direction == 0:
-            self.rx = self.w
+            self.rx = self.w  # pylint: disable=C0103
         else:
             self.rx = 0
 
@@ -93,7 +94,7 @@ class Marquee:
             self.screen.blit(textSurface, (self.rx + offset, self.ry))
             offset += textSurface.get_width()
 
-        #pygame.draw.rect(self.screen, GREEN, rect, 1)
+        # pygame.draw.rect(self.screen, GREEN, rect, 1)
 
     def reset(self):
         self.dict.clear()
