@@ -20,6 +20,7 @@ import threading
 import pygame
 
 from Marquee import *
+from PiTft import *
 import pprint
 import paho.mqtt.client as mqtt  # type: ignore
 import json
@@ -30,64 +31,6 @@ from icon import Icon, Button
 import urllib
 import configparser
 from domoticzHandler import domoticzHandler
-
-
-class PiTft:
-    'Pi Tft screen class'
-    screen = None
-
-    def __init__(self, bgc=BLACK):
-        """
-        Initializes a new pygame screen using the framebuffer.
-        Based on "Python GUI in Linux frame buffer
-        """
-        disp_no = os.getenv("DISPLAY")
-        if disp_no:
-            print("I'm running under X display = {0}".format(disp_no))
-
-        try:
-            pygame.init()
-            pygame.mixer.quit()
-        except pygame.error:
-            print('Driver:  failed.')
-
-        pygame.display.set_caption(title)
-
-        if displayClock:
-            size = (480, 360)
-        else:
-            size = (480, 8 * 1.5 * 18)
-
-        print("Framebuffer size: %d x %d" % (size[0], size[1]))
-
-        # Set up the drawing window
-        if noFrame:
-            self.screen = pygame.display.set_mode(size, pygame.NOFRAME)
-        else:
-            self.screen = pygame.display.set_mode(size)
-        pygame.mouse.set_visible(True)
-        # Clear the screen to start
-        self.bgc = bgc
-        self.screen.fill(self.bgc)
-        # Initialise font support
-        pygame.font.init()
-        # Render the screen
-        #  print(pygame.display.Info())
-        pygame.display.update()
-
-    def __del__(self):
-        # Destructor to make sure pygame shuts down, etc."
-        print("del pygame instance")
-
-    def clear(self, colour=None):
-        if colour == None:
-            colour = self.bgc
-        self.screen.fill(colour)
-        logging.debug(' Clear screen')
-
-    def setBackgroundColour(self, colour=None):
-        if colour != None:
-            self.bgc = colour
 
 
 hostname = os.uname().nodename
@@ -124,7 +67,6 @@ mqttUserName = ""
 mqttPassword = ""
 mqttIp = ""
 mqttPort = ""
-
 kWh = 0
 energy = "0"
 rssi = 0
@@ -139,10 +81,43 @@ angle = 0
 
 SABLIER_XPOS = 390
 SABLIER_YOFFSET = 10
-# Create an instance of the PiTft class
-scope = PiTft()
-scope.clear()
-lcd = scope.screen
+
+
+def parseArg():
+    global idx, title, displayClock, noFrame
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "fhni:t:", [
+                                   "noframe", "help", "noclock", "idx=", "title="])
+        logging.debug(str(opts))
+        logging.debug(str(args))
+    except getopt.error as err:
+        # output error, and return with an error code
+        logging.error(str(err))
+        logging.error(
+            'ERROR parsing argv  {} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ('-h', "--help"):
+            print(
+                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+            logging.debug(
+                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+            sys.exit()
+        elif opt in ("-i", "--idx"):
+            idx = int(arg)
+            logging.debug("idx is " + arg)
+        elif opt in ("-t", "--title"):
+            title = arg
+            logging.debug("title is ' + title")
+        elif opt in ("-n", "--noclock"):
+            displayClock = False
+            logging.debug("clock is " + str(displayClock))
+        elif opt in ("-f", "--noframe"):
+            noFrame = True
+            logging.debug("noFrame is " + str(noFrame))
+        else:
+            return
 
 
 def get_config(file):
@@ -202,78 +177,6 @@ def triggerAnimation():
     angle = 0
 
 
-def parseArg():
-    global idx, title, displayClock, noFrame
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "fhni:t:", [
-                                   "noframe", "help", "noclock", "idx=", "title="])
-        logging.debug(str(opts))
-        logging.debug(str(args))
-    except getopt.error as err:
-        # output error, and return with an error code
-        logging.error(str(err))
-        logging.error(
-            'ERROR parsing argv  {} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ('-h', "--help"):
-            print(
-                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
-            logging.debug(
-                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
-            sys.exit()
-        elif opt in ("-i", "--idx"):
-            idx = int(arg)
-            logging.debug("idx is " + arg)
-        elif opt in ("-t", "--title"):
-            title = arg
-            logging.debug("title is ' + title")
-        elif opt in ("-n", "--noclock"):
-            displayClock = False
-            logging.debug("clock is " + str(displayClock))
-        elif opt in ("-f", "--noframe"):
-            noFrame = True
-            logging.debug("noFrame is " + str(noFrame))
-        else:
-            return
-
-
-def DomoticzAPI(APICall):
-    start = time.time()
-    resultJson = None
-    ip = "192.168.0.160"  # Local Domoticz server ip
-    url = "http://{}:8080/json.htm?{}".format(ip,
-                                              urllib.parse.quote(APICall, '&='))
-    logging.debug(url)
-    req = urllib.request.Request(url)
-
-    try:
-        response = urllib.request.urlopen(req)
-    except urllib.URLError as e:
-        if hasattr(e, 'reason'):
-            logging.error('We failed to reach a server.')
-            logging.error('Reason: ', e.reason)
-        elif hasattr(e, 'code'):
-            logging.error('The server couldn\'t fulfill the request.')
-            logging.error('Error code: ', e.code)
-
-        logging.error(url)
-    else:
-        resultJson = json.loads(response.read().decode('utf-8'))
-        logging.debug(resultJson["status"])
-        if resultJson["status"] != "OK":
-            logging.error("Domoticz API returned an error: status = {}".format(
-                resultJson["status"]))
-            resultJson = None
-            return resultJson
-        else:
-            elapsed = (time.time() - start) * 1000
-            logging.debug(
-                "Calling domoticz API: {}  [{:.0f} ms]".format(url, elapsed))
-            return resultJson
-
-
 def on_connect(client, userdata, flag, rc):
     global hostname
     global mqttIp
@@ -295,8 +198,11 @@ def on_message(client, userdata, msg):
     RenderThreadMqtt(msg, 'ENERGY').start()
 
 
-def getStatus(idx):
-        return
+# Create an instance of the PiTft class
+scope = PiTft(title=title, no_frame=noFrame, display_clock=displayClock)
+scope.clear()
+lcd = scope.screen
+
 
 def renderEnergy():
 
@@ -432,8 +338,7 @@ class RenderThreadMqtt(threading.Thread):
                 energy = str(payload['apparent_power'])
             elif 'conso' in payload:
                 kWh = str(payload['conso'])
-                
-                
+
             renderEnergy()
 
         except ValueError:
@@ -530,7 +435,8 @@ try:
                 angle = 0
                 # Display original image
                 lcd.fill(BLACK, rect)
-                lcd.blit(iconAlarmClockBitmap, (SABLIER_XPOS,  SABLIER_YOFFSET))
+                lcd.blit(iconAlarmClockBitmap,
+                         (SABLIER_XPOS,  SABLIER_YOFFSET))
 
             lcd.fill(BLACK, rect)
             rotated_image, rect = blitRotate(
@@ -562,7 +468,6 @@ try:
                 print("screen pressed")  # for debugging purposes
                 pos = (pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
                 print(pos)  # for checking
-                threading.Thread(target=getStatus, args=(idx,)).start()
 
         pygame.display.update()
         clock.tick(30)
