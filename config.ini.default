@@ -4,6 +4,10 @@ MQTT_PASSWORD = <password if exists>
 MQTT_IP = <IP of mqtt broker>
 MQTT_PORT = <mqtt broker PORT>
 
+[Topics]
+topic1 = sensors/temperature
+topic2 = sensors/humidity
+
 [DOMOTICZ]
 DOMOTICZ_IP = <Domoticz server IP>
 DOMOTICZ_PORT = <Domoticz server PORT>

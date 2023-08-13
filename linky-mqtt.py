@@ -34,26 +34,27 @@ from domoticzHandler import domoticzHandler
 hostname = os.uname().nodename
 pp = pprint.PrettyPrinter(indent=4)
 # MQTT Topic to subscribe to
-TOPIC = [('zigbee2mqtt/lixee', 0), ('power/home/today', 1),
-         ('tele/sonoff/SENSOR', 1)]
-
+TOPIC = [("zigbee2mqtt/lixee", 0), ("power/home/today", 1), ("tele/sonoff/SENSOR", 1)]
 # os.path.realpath returns the canonical path of the specified filename,
 # eliminating any symbolic links encountered in the path.
 
 path = script_dir = os.path.dirname(os.path.realpath(__file__)) + os.path.sep
-configuration_file = script_dir + '/config.ini'
+configuration_file = script_dir + "/config.ini"
 
-logging.config.fileConfig(configuration_file, defaults={
-                          'logfilename': script_dir + '/linky.log'}, disable_existing_loggers=False)
+logging.config.fileConfig(
+    configuration_file,
+    defaults={"logfilename": script_dir + "/linky.log"},
+    disable_existing_loggers=False,
+)
 
 # set up the colors
-BLACK = (0,   0,   0)
+BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREY = (211, 211, 211)
 DARKSLATEGREY = (47, 79, 79)
-RED = (255,   0,   0)
-GREEN = (0, 255,   0)
-BLUE = (0,   0, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 MYGREEN = (0, 96, 65)
 DARKORANGE = (255, 140, 0)
 YELLOW = (255, 255, 0)
@@ -66,6 +67,7 @@ mqttUserName = ""
 mqttPassword = ""
 mqttIp = ""
 mqttPort = ""
+topics = ""
 kWh = 0
 energy = "0"
 rssi = 0
@@ -74,7 +76,7 @@ tidx = 27  # default idx which will be displayed in marquee. Here SONOFF POW idx
 title = "Energy"  # default caption
 displayClock = True
 noFrame = False
-lastUpdateTime = ''
+lastUpdateTime = ""
 animation = False
 angle = 0
 
@@ -86,22 +88,32 @@ def parseArg():
     global idx, title, displayClock, noFrame
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "fhni:t:", [
-                                   "noframe", "help", "noclock", "idx=", "title="])
+        opts, args = getopt.getopt(
+            sys.argv[1:], "fhni:t:", ["noframe", "help", "noclock", "idx=", "title="]
+        )
         logging.debug(str(opts))
         logging.debug(str(args))
     except getopt.error as err:
         # output error, and return with an error code
         logging.error(str(err))
         logging.error(
-            'ERROR parsing argv  {} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+            "ERROR parsing argv  {} [--noframe] [--noclock] [--help] -i <idx> -t <title>".format(
+                sys.argv[0]
+            )
+        )
         sys.exit(2)
     for opt, arg in opts:
-        if opt in ('-h', "--help"):
+        if opt in ("-h", "--help"):
             print(
-                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+                "{} [--noframe] [--noclock] [--help] -i <idx> -t <title>".format(
+                    sys.argv[0]
+                )
+            )
             logging.debug(
-                '{} [--noframe] [--noclock] [--help] -i <idx> -t <title>'.format(sys.argv[0]))
+                "{} [--noframe] [--noclock] [--help] -i <idx> -t <title>".format(
+                    sys.argv[0]
+                )
+            )
             sys.exit()
         elif opt in ("-i", "--idx"):
             idx = int(arg)
@@ -130,12 +142,15 @@ def get_config(file):
             global mqttPassword
             global mqttIp
             global mqttPort
+            global topics
+
             global index
             logging.debug("Get variable MQTT")
-            mqttUserName = config.get('MQTT', 'MQTT_USERNAME')
-            mqttPassword = config.get('MQTT', 'MQTT_PASSWORD')
-            mqttIp = config.get('MQTT', 'MQTT_IP')
-            mqttPort = config.get('MQTT', 'MQTT_PORT')
+            mqttUserName = config.get("MQTT", "MQTT_USERNAME")
+            mqttPassword = config.get("MQTT", "MQTT_PASSWORD")
+            mqttIp = config.get("MQTT", "MQTT_IP")
+            mqttPort = config.get("MQTT", "MQTT_PORT")
+            topics = [config.get("Topics", topic) for topic in config.options("Topics")]
 
         except configparser.Error as err:
             logging.error("ConfigParser: %s", err)
@@ -147,16 +162,14 @@ def get_config(file):
 
 def blitRotate(image, pos, originPos, angle):
     # offset from pivot to center
-    image_rect = image.get_rect(
-        topleft=(pos[0] - originPos[0], pos[1] - originPos[1]))
+    image_rect = image.get_rect(topleft=(pos[0] - originPos[0], pos[1] - originPos[1]))
     offset_center_to_pivot = pygame.math.Vector2(pos) - image_rect.center
 
     # rotated offset from pivot to center
     rotated_offset = offset_center_to_pivot.rotate(-angle)
 
     # rotated image center
-    rotated_image_center = (pos[0] - rotated_offset.x,
-                            pos[1] - rotated_offset.y)
+    rotated_image_center = (pos[0] - rotated_offset.x, pos[1] - rotated_offset.y)
 
     # get a rotated image
     rotated_image = pygame.transform.rotate(image, angle)
@@ -175,22 +188,23 @@ def triggerAnimation():
 def on_connect(client, userdata, flag, rc):
     global hostname
     global mqttIp
-    logging.debug(
-        "{} connected with result code {} ".format(hostname, str(rc)))
+    global topics
+    logging.debug("{} connected with result code {} ".format(hostname, str(rc)))
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     if rc == 0:
-        logging.info("{} connected to broker @ {} rc {}".format(
-            hostname, mqttIp, rc))
-        client.subscribe(TOPIC)
-        logging.debug(str(TOPIC).strip('[]'))
+        logging.info("{} connected to broker @ {} rc {}".format(hostname, mqttIp, rc))
+        for topic in topics:
+            client.subscribe(topic, 1)
+        # client.subscribe(TOPIC)
     else:
-        logging.error("{} connection error  to broker @ {} rc {}".format(
-            hostname, mqttIp, rc))
+        logging.error(
+            "{} connection error  to broker @ {} rc {}".format(hostname, mqttIp, rc)
+        )
 
 
 def on_message(client, userdata, msg):
-    RenderThreadMqtt(msg, 'ENERGY').start()
+    RenderThreadMqtt(msg, "ENERGY").start()
 
 
 # Create an instance of the PiTft class
@@ -200,13 +214,11 @@ lcd = scope.screen
 
 
 def renderEnergy():
-
-    logging.debug(' Render Energy display ')
+    logging.debug(" Render Energy display ")
     global lcd
     width, _ = lcd.get_size()
     textAnchorX = 0
     textAnchorY = 0
-
 
     # Render Kwh
     kWhStr = "{:.1f}".format(round(float(kWh), 1)) + " kWh "
@@ -229,13 +241,12 @@ def renderEnergy():
     textrect.topleft = (240, textAnchorY)
     lcd.blit(text, textrect)
     # Display Alarm Icon
-    lcd.blit(iconAlarmClockBitmap,
-             (SABLIER_XPOS, textAnchorY + SABLIER_YOFFSET))
+    lcd.blit(iconAlarmClockBitmap, (SABLIER_XPOS, textAnchorY + SABLIER_YOFFSET))
     # Render RSSI
     index = int(rssi) // 2 - 1  # get the right icon index
     lcd.blit(iconSignal[index].bitmap, (430, textAnchorY + 3))
     # Render Energy
-    textAnchorY = + size[1] + 15
+    textAnchorY = +size[1] + 15
     size = fontTempHuge.size(energy)
     rect = [(textAnchorX, textAnchorY), (width, size[1])]
 
@@ -247,13 +258,12 @@ def renderEnergy():
     else:
         color = WHITE
 
-    WattBlack = fontTemp.render('W', True, BLACK)
-    Watt = fontTemp.render('W', True, DARKSLATEGREY)
+    WattBlack = fontTemp.render("W", True, BLACK)
+    Watt = fontTemp.render("W", True, DARKSLATEGREY)
     textBlack = fontTempHuge.render(energy, True, BLACK)
     text = fontTempHuge.render(energy, True, color)
     textrect = text.get_rect()
-    textrect.center = (width // 2,
-                       textAnchorY + size[1] // 2 - 6)
+    textrect.center = (width // 2, textAnchorY + size[1] // 2 - 6)
 
     # Création effet mise à jour pendant 0,5 seconde
     lcd.fill(WHITE, rect)
@@ -262,7 +272,7 @@ def renderEnergy():
     lcd.blit(WattBlack, (426, textAnchorY + 6))
     pygame.display.update()
 
-    time.sleep(.5)
+    time.sleep(0.5)
     # Affiche text
     lcd.fill(BLACK, rect)
     lcd.blit(text, textrect)
@@ -273,9 +283,9 @@ def renderEnergy():
 
 
 def handler(signum=None, frame=None):
-    logging.debug(' Signal handler called with signal ' + str(signum))
+    logging.debug(" Signal handler called with signal " + str(signum))
     time.sleep(1)  # here check if process is done
-    logging.debug(' Wait done')
+    logging.debug(" Wait done")
     pygame.display.quit()
     pygame.quit()
     client.disconnect()  # disconnect
@@ -284,7 +294,7 @@ def handler(signum=None, frame=None):
 
 
 for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
-    logging.debug(' Registering handler for signal %s' % (sig))
+    logging.debug(" Registering handler for signal %s" % (sig))
     signal.signal(sig, handler)
 
 
@@ -297,7 +307,7 @@ class RenderTimeThread(threading.Thread):
         margin = 0
         textAnchorX = 0
         textAnchorY = 0
-        text = fontTime.render(time.strftime('%H:%M:%S'), True, GREY)
+        text = fontTime.render(time.strftime("%H:%M:%S"), True, GREY)
         # Get height of the screen
         textHeight = text.get_height()
         textAnchorY = height - textHeight - margin
@@ -324,53 +334,55 @@ class RenderThreadMqtt(threading.Thread):
         try:
             payload = json.loads(self.msg.payload)
             logging.debug(payload)
-
-            if 'MOTDETAT' in payload:
-                logging.debug(str(payload['apparent_power']) +
-                              'VA ' + str(payload['linkquality']))
-                rssi = str(int(payload['linkquality']/35))
-                lastUpdateTime = time.strftime('%H:%M')
-                energy = str(payload['apparent_power'])
-            elif 'conso' in payload:
-                kWh = str(payload['conso'])
+            if "ENERGY" in payload:
+                marquee.addMsg(
+                    "SI " + str(payload["ENERGY"]["Power"]) + "W",
+                    DARKSLATEGREY,
+                    name="energy",
+                )
+            elif "MOTDETAT" in payload:
+                logging.debug(
+                    str(payload["apparent_power"]) + "VA " + str(payload["linkquality"])
+                )
+                rssi = str(int(payload["linkquality"] / 35))
+                lastUpdateTime = time.strftime("%H:%M")
+                energy = str(payload["apparent_power"])
+            elif "conso" in payload:
+                kWh = str(payload["conso"])
 
             renderEnergy()
 
-            if 'ENERGY' in payload:
-                marquee.addMsg(
-                    'SI ' + str(payload['ENERGY']['Power']) + 'W', DARKSLATEGREY, name='energy')
-
         except ValueError:
-            logging.warning(' %s LINKY ERROR ' % (threading.current_thread()))
+            logging.warning(" %s LINKY ERROR " % (threading.current_thread()))
 
 
 parseArg()
 get_config(configuration_file)
 
 icons = []  # This list gets populated at startup
-iconPath = path + '/icons'  # Sub-directory containing UI bitmaps (PNG format)
+iconPath = path + "/icons"  # Sub-directory containing UI bitmaps (PNG format)
 iconSignal = []
-iconSignal.append(Icon(path, '/icons/S1-46'))
-iconSignal.append(Icon(path, '/icons/S2-46'))
-iconSignal.append(Icon(path, '/icons/S3-46'))
-iconSignal.append(Icon(path, '/icons/S4-46'))
-iconSignal.append(Icon(path, '/icons/S5-46'))
+iconSignal.append(Icon(path, "/icons/S1-46"))
+iconSignal.append(Icon(path, "/icons/S2-46"))
+iconSignal.append(Icon(path, "/icons/S3-46"))
+iconSignal.append(Icon(path, "/icons/S4-46"))
+iconSignal.append(Icon(path, "/icons/S5-46"))
 
-iconAlarmClockBitmap = Icon(path, '/icons/antenna-5-32').bitmap
+iconAlarmClockBitmap = Icon(path, "/icons/antenna-5-32").bitmap
 w, h = iconAlarmClockBitmap.get_size()
-pygame.display.set_icon(Icon(path, '/icons/flash').bitmap)
+pygame.display.set_icon(Icon(path, "/icons/flash").bitmap)
 
 # Load all icons at startup.
 for file in os.listdir(iconPath):
-    if fnmatch.fnmatch(file, '*.png'):
-        icons.append(Icon(iconPath, file.split('.')[0]))
+    if fnmatch.fnmatch(file, "*.png"):
+        icons.append(Icon(iconPath, file.split(".")[0]))
 # Assign Icons to Buttons, now that they're loaded
 
 # set up the fonts
-fontpath = pygame.font.match_font('dejavusansmono')
-zfontpath = path + '/fonts/HandelGotD.ttf'
-logging.debug(' zfontpath %s' % (zfontpath))
-logging.debug(' fontpath %s' % (fontpath))
+fontpath = pygame.font.match_font("dejavusansmono")
+zfontpath = path + "/fonts/HandelGotD.ttf"
+logging.debug(" zfontpath %s" % (zfontpath))
+logging.debug(" fontpath %s" % (fontpath))
 # set up 2 sizes
 font = pygame.font.Font(fontpath, 28)
 fontMono36 = pygame.font.Font(fontpath, 36)
@@ -381,9 +393,9 @@ fontTempHuge = pygame.font.Font(zfontpath, 150)
 fontTemp = pygame.font.Font(zfontpath, 50)
 
 updateRate = 60 * 5  # kWh update interval in seconds
-running = True      # define a variable to control the main loop
+running = True  # define a variable to control the main loop
 marquee = Marquee(fontTitle, DARKSLATEGREY, speed=2, ry=135 * 1.5)
-marquee.addMsg('sonoff', DARKSLATEGREY, name='energy')
+marquee.addMsg("En attente de message...", DARKSLATEGREY, name="energy")
 
 # Create time event for updating kWh
 # updatekWh_event = pygame.USEREVENT + 1
@@ -416,7 +428,6 @@ except:
     sys.exit(1)
 
 try:
-
     while running:
         pygame.draw.rect(lcd, 0, marquee.getRect())
         marquee.update()
@@ -426,19 +437,26 @@ try:
 
             if angle == 0:
                 rotated_image, rect = blitRotate(
-                    iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
+                    iconAlarmClockBitmap,
+                    (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET),
+                    (w / 2, h / 2),
+                    angle,
+                )
 
             if angle >= 360:
                 animation = False
                 angle = 0
                 # Display original image
                 lcd.fill(BLACK, rect)
-                lcd.blit(iconAlarmClockBitmap,
-                         (SABLIER_XPOS,  SABLIER_YOFFSET))
+                lcd.blit(iconAlarmClockBitmap, (SABLIER_XPOS, SABLIER_YOFFSET))
 
             lcd.fill(BLACK, rect)
             rotated_image, rect = blitRotate(
-                iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
+                iconAlarmClockBitmap,
+                (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET),
+                (w / 2, h / 2),
+                angle,
+            )
             lcd.blit(rotated_image, rect)
             angle += 5
 
@@ -451,12 +469,13 @@ try:
             elif displayClock and event.type == clock_event:
                 RenderTimeThread().start()
                 pygame.display.set_caption(
-                    "{} FPS: {:.1f}".format(title, clock.get_fps()))
+                    "{} FPS: {:.1f}".format(title, clock.get_fps())
+                )
 
             pressed_keys = pygame.key.get_pressed()
 
             if pressed_keys[pygame.K_ESCAPE]:
-                print('K_ESCAPE')
+                print("K_ESCAPE")
                 running = False
 
             if event.type == pygame.MOUSEBUTTONDOWN:

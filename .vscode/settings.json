@@ -1,9 +1,4 @@
 {
-    "cSpell.words": [
-        "blit",
-        "pygame",
-        "Vandecasteele"
-    ],
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
