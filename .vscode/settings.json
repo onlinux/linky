@@ -14,5 +14,6 @@
     ],
     // https://code.visualstudio.com/docs/python/testing#_pytest-configuration-settings
     "python.testing.pytestEnabled": false,
-    "python.formatting.provider": "none"
+    "python.formatting.provider": "none",
+    "cSpell.enabled": false
 }
