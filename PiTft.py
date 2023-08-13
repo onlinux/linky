@@ -18,6 +18,7 @@ DARKGREEN = (0, 100, 0)
 NAVY = (16, 22, 137)
 LIGHTBLUE = (0, 113, 188)
 
+
 class PiTft:
     'Pi Tft screen class'
     screen = None
@@ -73,4 +74,3 @@ class PiTft:
     def setBackgroundColour(self, colour=None):
         if colour != None:
             self.bgc = colour
-

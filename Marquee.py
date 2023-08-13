@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+#
+# Author: Eric Vandecasteele (c)2022
+# http://blog.onlinux.fr
+#
 import pygame
 
 # set up the colors
@@ -44,7 +47,6 @@ class Marquee:
         self.rect = ()
 
     def getRect(self):
-        # return  rectangle
         rect = pygame.Rect(0, self.ry, self.w, self.th)
         return rect
 
@@ -86,7 +88,6 @@ class Marquee:
                 self.rx = -1 * self.tw
 
         self.rect = self.text.get_rect()
-        rect = self.rect.move(self.rx, self.ry)
 
         offset = 0
         for msg in self.dict:

@@ -19,16 +19,14 @@ import getopt
 import threading
 import pygame
 
-from Marquee import *
-from PiTft import *
+from Marquee import Marquee
+from PiTft import PiTft
 import pprint
 import paho.mqtt.client as mqtt  # type: ignore
 import json
 from datetime import datetime
 import fnmatch
 from icon import Icon, Button
-# Libraries needed to access DomoticzAPI
-import urllib
 import configparser
 from domoticzHandler import domoticzHandler
 
@@ -138,10 +136,6 @@ def get_config(file):
             mqttPassword = config.get('MQTT', 'MQTT_PASSWORD')
             mqttIp = config.get('MQTT', 'MQTT_IP')
             mqttPort = config.get('MQTT', 'MQTT_PORT')
-            id = config.get('DOMOTICZ', 'LINKY_IDX')
-            if id:
-                idx = id
-                logging.debug("IDX is %s", idx)
 
         except configparser.Error as err:
             logging.error("ConfigParser: %s", err)
@@ -151,7 +145,7 @@ def get_config(file):
         sys.exit(1)
 
 
-def blitRotate(surf, image, pos, originPos, angle):
+def blitRotate(image, pos, originPos, angle):
     # offset from pivot to center
     image_rect = image.get_rect(
         topleft=(pos[0] - originPos[0], pos[1] - originPos[1]))
@@ -209,10 +203,10 @@ def renderEnergy():
 
     logging.debug(' Render Energy display ')
     global lcd
-    width, height = lcd.get_size()
+    width, _ = lcd.get_size()
     textAnchorX = 0
     textAnchorY = 0
-    textYoffset = 32
+
 
     # Render Kwh
     kWhStr = "{:.1f}".format(round(float(kWh), 1)) + " kWh "
@@ -334,7 +328,6 @@ class RenderThreadMqtt(threading.Thread):
             if 'MOTDETAT' in payload:
                 logging.debug(str(payload['apparent_power']) +
                               'VA ' + str(payload['linkquality']))
-                color = WHITE
                 rssi = str(int(payload['linkquality']/35))
                 lastUpdateTime = time.strftime('%H:%M')
                 energy = str(payload['apparent_power'])
@@ -363,7 +356,6 @@ iconSignal.append(Icon(path, '/icons/S3-46'))
 iconSignal.append(Icon(path, '/icons/S4-46'))
 iconSignal.append(Icon(path, '/icons/S5-46'))
 
-# iconAlarmClock = Icon(path, '/icons/time-5-32-green')
 iconAlarmClockBitmap = Icon(path, '/icons/antenna-5-32').bitmap
 w, h = iconAlarmClockBitmap.get_size()
 pygame.display.set_icon(Icon(path, '/icons/flash').bitmap)
@@ -434,7 +426,7 @@ try:
 
             if angle == 0:
                 rotated_image, rect = blitRotate(
-                    lcd, iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
+                    iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
 
             if angle >= 360:
                 animation = False
@@ -446,7 +438,7 @@ try:
 
             lcd.fill(BLACK, rect)
             rotated_image, rect = blitRotate(
-                lcd, iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
+                iconAlarmClockBitmap, (SABLIER_XPOS + w / 2, h / 2 + SABLIER_YOFFSET), (w / 2, h / 2), angle)
             lcd.blit(rotated_image, rect)
             angle += 5
 
