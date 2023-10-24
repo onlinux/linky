@@ -19,20 +19,17 @@ import getopt
 import threading
 import pygame
 import colors
-from Marquee import Marquee
 from PiTft import PiTft
 import pprint
 import paho.mqtt.client as mqtt  # type: ignore
 import json
-from datetime import datetime
 import fnmatch
-from icon import Icon, Button
 import configparser
-from domoticzHandler import domoticzHandler
-
+from icon import Icon
 
 hostname = os.uname().nodename
 pp = pprint.PrettyPrinter(indent=4)
+
 # Constants
 SABLIER_XPOS = 390
 SABLIER_YOFFSET = 10
@@ -40,11 +37,11 @@ SABLIER_YOFFSET = 10
 # eliminating any symbolic links encountered in the path.
 
 path = script_dir = os.path.dirname(os.path.realpath(__file__)) + os.path.sep
-configuration_file = script_dir + "/config.ini"
+configuration_file = script_dir + "/configtemp.ini"
 
 logging.config.fileConfig(
     configuration_file,
-    defaults={"logfilename": script_dir + "/linky.log"},
+    defaults={"logfilename": script_dir + "/temp.log"},
     disable_existing_loggers=False,
 )
 
@@ -54,17 +51,18 @@ mqttPassword = ""
 mqttIp = ""
 mqttPort = ""
 topics = ""
-kWh = 0
-energy = "0"
+outdoorTemp = 0
+indoorTemp = "0"
 rssi = 0
 idx = 466  # default idx LINKY P1_M
 tidx = 27  # default idx which will be displayed in marquee. Here SONOFF POW idx
-title = "Energy"  # default caption
+title = "indoorTemp"  # default caption
 displayClock = True
 noFrame = False
 lastUpdateTime = ""
 animation = False
 angle = 0
+
 
 def parseArg():
     global idx, title, displayClock, noFrame
@@ -171,7 +169,7 @@ def on_connect(client, userdata, flag, rc):
     global hostname
     global mqttIp
     global topics
-    logging.debug("{} connected with result code {} ".format(hostname, str(rc)))
+    logging.debug("{} connecting with result code {} ".format(hostname, str(rc)))
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     if rc == 0:
@@ -186,7 +184,7 @@ def on_connect(client, userdata, flag, rc):
 
 
 def on_message(client, userdata, msg):
-    RenderThreadMqtt(msg, "ENERGY").start()
+    RenderThreadMqtt(msg, "TEMPERATURE").start()
 
 
 # Create an instance of the PiTft class
@@ -195,71 +193,66 @@ scope.clear()
 lcd = scope.screen
 
 
-def renderEnergy():
-    logging.debug(" Render Energy display ")
+def renderTemp():
+    logging.debug(" Render Temperature display ")
     global lcd
     width, _ = lcd.get_size()
     textAnchorX = 0
     textAnchorY = 0
 
-    # Render Kwh
-    kWhStr = "{:.1f}".format(round(float(kWh), 1)) + " kWh "
-    color = colors.RED if float(kWh) > 12.0 else colors.DARKORANGE
-    color = colors.GREEN if float(kWh) < 10.0 else color
-
-    text = fontTemp.render(kWhStr, True, color)
-    size = fontTemp.size(kWhStr)
+    # Render outdoorTemp
+    outdoorTempStr = "{:.1f}".format(round(float(outdoorTemp), 1)) + "°C "
+    # color = colors.RED if float(outdoorTemp) > 27.0 else colors.DARKORANGE
+    # color = colors.GREEN if float(outdoorTemp) < 23.0 else color
+    color = colors.outdoor_temp_to_rgb(float(outdoorTemp))
+    logging.debug("outdoor ")
+    logging.debug( color)
+    text = fontTemp.render(outdoorTempStr, True, color)
+    size = fontTemp.size(outdoorTempStr)
     textrect = text.get_rect()
     textrect.topleft = (5, textAnchorY)
 
     # clear left side
     rect = [(textAnchorX, textAnchorY), (width, size[0] / 2)]
     lcd.fill(colors.BLACK, rect)
-    # render kWh string
+    # render outdoorTemp string
     lcd.blit(text, textrect)
     # Render Last update
     timeStr = lastUpdateTime
-    text = fontTemp.render(timeStr, True, color)
-    textrect.topleft = (240, textAnchorY)
+    text = fontTemp.render(timeStr, True, colors.WHITE)
+    textrect.topleft = (230, textAnchorY)
     lcd.blit(text, textrect)
     # Display Alarm Icon
     lcd.blit(iconAlarmClockBitmap, (SABLIER_XPOS, textAnchorY + SABLIER_YOFFSET))
     # Render RSSI
     index = int(rssi) // 2 - 1  # get the right icon index
     lcd.blit(iconSignal[index].bitmap, (430, textAnchorY + 3))
-    # Render Energy
+    # Render indoorTemp
     textAnchorY = +size[1] + 15
-    size = fontTempHuge.size(energy)
+    size = fontTempHuge.size(indoorTemp)
     rect = [(textAnchorX, textAnchorY), (width, size[1])]
 
-    value = float(energy)
-    if value > 2500.0:
-        color = colors.RED
-    elif value > 1000.0:
-        color = colors.DARKORANGE
-    else:
-        color = colors.WHITE
 
-    WattBlack = fontTemp.render("W", True, colors.BLACK)
-    Watt = fontTemp.render("W", True, colors.DARKSLATEGREY)
-    textBlack = fontTempHuge.render(energy, True, colors.BLACK)
-    text = fontTempHuge.render(energy, True, color)
+    color = colors.indoor_temp_to_rgb(float(indoorTemp))
+    logging.debug("INDOOR")
+    logging.info(color)
+    textBlack = fontTempHuge.render(indoorTemp + "°C", True, colors.BLACK)
+    text = fontTempHuge.render(indoorTemp + "°C", True, color)
     textrect = text.get_rect()
     textrect.center = (width // 2, textAnchorY + size[1] // 2 - 6)
 
     # Création effet mise à jour pendant 0,5 seconde
     # lcd.fill(colors.WHITE, rect)
     # lcd.blit(textBlack, textrect)
-    # lcd.blit(WattBlack, (284, textAnchorY + size[1] // 2 - 6))
-    # lcd.blit(WattBlack, (426, textAnchorY + 6))
-    # pygame.display.update()
+
+    #pygame.display.update()
 
     # time.sleep(0.5)
-    # Affiche text
+    # # Affiche text
     lcd.fill(colors.BLACK, rect)
     lcd.blit(text, textrect)
-    lcd.blit(Watt, (426, textAnchorY + 6))
-    pygame.display.update()
+
+    #pygame.display.update()
 
     triggerAnimation()
 
@@ -308,34 +301,26 @@ class RenderThreadMqtt(threading.Thread):
         self.what = what
 
     def run(self):
-        global kWh
+        global outdoorTemp
         global rssi
-        global energy
+        global indoorTemp
         global lastUpdateTime
         global marquee
         try:
+            topic = self.msg.topic
             payload = json.loads(self.msg.payload)
-            logging.debug(payload)
-            if "ENERGY" in payload:
-                marquee.addMsg(
-                    "SI " + str(payload["ENERGY"]["Power"]) + "W",
-                    colors.DARKSLATEGREY,
-                    name="energy",
-                )
-            elif "MOTDETAT" in payload:
-                logging.debug(
-                    str(payload["apparent_power"]) + "VA " + str(payload["linkquality"])
-                )
-                rssi = str(int(payload["linkquality"] / 35))
+            logging.debug(topic, payload)
+            if topic == "zigbee2mqtt/salle-a-manger_probe":
                 lastUpdateTime = time.strftime("%H:%M")
-                energy = str(payload["apparent_power"])
-            elif "conso" in payload:
-                kWh = str(payload["conso"])
+                rssi = str(int(payload["linkquality"] / 35))
+                indoorTemp = str(payload["temperature"])
+            elif topic == "rtl_433/events/133":
+                outdoorTemp = str(payload["temperature_C"])
 
-            renderEnergy()
-
+            renderTemp()            
+            
         except ValueError:
-            logging.warning(" %s LINKY ERROR " % (threading.current_thread()))
+            logging.warning(" %s MQTT ERROR " % (threading.current_thread()))
 
 
 parseArg()
@@ -376,8 +361,8 @@ fontTemp = pygame.font.Font(zfontpath, 50)
 
 updateRate = 60 * 5  # kWh update interval in seconds
 running = True  # define a variable to control the main loop
-marquee = Marquee(fontTitle, colors.DARKSLATEGREY, speed=2, ry=135 * 1.5)
-marquee.addMsg("En attente de message...", colors.DARKSLATEGREY, name="energy")
+# marquee = Marquee(fontTitle, colors.DARKSLATEGREY, speed=2, ry=135 * 1.5)
+# marquee.addMsg("En attente de message...", colors.DARKSLATEGREY, name="indoorTemp")
 
 # Create time event for updating kWh
 # updatekWh_event = pygame.USEREVENT + 1
@@ -393,7 +378,7 @@ clock = pygame.time.Clock()
 
 try:
     # Setup MQTT connection and start loop
-    client = mqtt.Client("LINKY {}".format(hostname))
+    client = mqtt.Client("TEMPERATURE {}".format(hostname))
     client.on_connect = on_connect
     client.on_message = on_message
     client.username_pw_set(username=mqttUserName, password=mqttPassword)
@@ -411,11 +396,9 @@ except:
 
 try:
     while running:
-
-        pygame.draw.rect(lcd, 0, marquee.getRect())
-        
-        marquee.update()
-
+        # pygame.draw.rect(lcd, 0, marquee.getRect())
+        # marquee.update()
+        # event = pygame.event.wait()
         if animation:
             # print ('Angle', angle)
 
@@ -442,7 +425,7 @@ try:
                 angle,
             )
             lcd.blit(rotated_image, rect)
-            angle += 15
+            angle += 10
 
         for event in pygame.event.get():
             # print(event)
@@ -468,7 +451,7 @@ try:
                 print(pos)  # for checking
 
         pygame.display.update()
-        clock.tick(10)
+        clock.tick(5)
 
 finally:
     logging.info("{} Quit".format(hostname))

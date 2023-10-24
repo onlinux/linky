@@ -16,3 +16,4 @@ config.ini
 PyZiBase/
 Zapi/
 build/
+configtemp.ini

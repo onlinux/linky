@@ -2,28 +2,13 @@
 # -*- coding: utf-8 -*-
 import os
 import pygame
-
-# set up the colors
-BLACK = (0,   0,   0)
-WHITE = (255, 255, 255)
-GREY = (211, 211, 211)
-DARKSLATEGREY = (47, 79, 79)
-RED = (255,   0,   0)
-GREEN = (0, 255,   0)
-BLUE = (0,   0, 255)
-MYGREEN = (0, 96, 65)
-DARKORANGE = (255, 140, 0)
-YELLOW = (255, 255, 0)
-DARKGREEN = (0, 100, 0)
-NAVY = (16, 22, 137)
-LIGHTBLUE = (0, 113, 188)
-
+import colors
 
 class PiTft:
     'Pi Tft screen class'
     screen = None
 
-    def __init__(self, title='PiTft', bgc=BLACK, no_frame=False, display_clock=True):
+    def __init__(self, title='PiTft', bgc=colors.BLACK, no_frame=False, display_clock=True):
         """
         Initializes a new pygame screen using the framebuffer.
         Based on "Python GUI in Linux frame buffer
